@@ -3,7 +3,7 @@
 # Tarea de Grafos
 
 ## Integrantes: 
-- 1 ____   _____
+- 1 Valeria Lock
 - 2 ____   _____
 - 3 ____   _____
 

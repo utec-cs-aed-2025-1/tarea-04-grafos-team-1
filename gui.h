@@ -79,6 +79,11 @@ public:
                                 path_finding_manager.exec(graph, Dijkstra);
                                 break;
                             }
+                            // B = Best First Search
+                            case sf::Keyboard::B: { 
+                                path_finding_manager.exec(graph, BestFirst);
+                                break;
+                            }
                             // A = Ejecutar AStar
                             case sf::Keyboard::A: {
                                 path_finding_manager.exec(graph, AStar);
