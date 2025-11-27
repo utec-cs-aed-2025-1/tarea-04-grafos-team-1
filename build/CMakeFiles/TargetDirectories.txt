@@ -1,0 +1,3 @@
+C:/Users/valer/github-classroom/utec-cs-aed-2025-1/tarea-04-grafos-team-1/build/CMakeFiles/homework_graph.dir
+C:/Users/valer/github-classroom/utec-cs-aed-2025-1/tarea-04-grafos-team-1/build/CMakeFiles/edit_cache.dir
+C:/Users/valer/github-classroom/utec-cs-aed-2025-1/tarea-04-grafos-team-1/build/CMakeFiles/rebuild_cache.dir

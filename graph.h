@@ -9,7 +9,7 @@
 #include "window_manager.h"
 #include "node.h"
 #include "edge.h"
-
+#include <map>
 
 // *
 // ---- Graph ----
