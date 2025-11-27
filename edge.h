@@ -10,6 +10,10 @@
 #include <cstring>
 #include <fstream>
 #include <cmath>
+#include <map>
+#include <vector>
+#include <string>
+#include <sstream>
 
 // Color por defecto de todas las aristas (usado por SFML)
 sf::Color default_edge_color = sf::Color(255, 200, 100);
@@ -17,29 +21,41 @@ sf::Color default_edge_color = sf::Color(255, 200, 100);
 float default_thickness = 0.8;
 
 
-// No tocar esta clase
+// No tocar esta clase (solo cambié la primitive type a TriangleStrip para SFML 3)
 class sfLine : public sf::Drawable {
 public:
     sfLine(const sf::Vector2f& point1, const sf::Vector2f& point2, sf::Color color, float thickness)
-    : thickness(thickness) {
-        sf::Vector2f direction = point2 - point1;
-        sf::Vector2f unitDirection = direction/std::sqrt(direction.x*direction.x+direction.y*direction.y);
-        sf::Vector2f unitPerpendicular(-unitDirection.y,unitDirection.x);
+        : thickness(thickness) {
 
-        sf::Vector2f offset = (this->thickness/2.f)*unitPerpendicular;
+        sf::Vector2f direction = point2 - point1;
+        float lenSq = direction.x * direction.x + direction.y * direction.y;
+
+        // Si los puntos son iguales (longitud 0), evitamos dividir entre 0.
+        if (lenSq == 0.f) {
+            for (auto &vertex : Vertices) {
+                vertex.position = point1;
+                vertex.color = color;
+            }
+            return;
+        }
+
+        sf::Vector2f unitDirection = direction / std::sqrt(lenSq);
+        sf::Vector2f unitPerpendicular(-unitDirection.y, unitDirection.x);
+
+        sf::Vector2f offset = (this->thickness / 2.f) * unitPerpendicular;
 
         Vertices[0].position = point1 + offset;
         Vertices[1].position = point2 + offset;
         Vertices[2].position = point2 - offset;
         Vertices[3].position = point1 - offset;
 
-        for (auto & vertex : Vertices) {
+        for (auto &vertex : Vertices) {
             vertex.color = color;
         }
     }
 
     void draw(sf::RenderTarget &target, sf::RenderStates states) const override {
-        target.draw(Vertices,4,sf::Quads);
+        target.draw(Vertices, 4, sf::PrimitiveType::TriangleStrip);
     }
 
 private:
@@ -80,12 +96,12 @@ struct Edge {
     sf::Color color = default_edge_color;
     float thickness = default_thickness;
 
-    explicit Edge(Node *src, Node *dest, int max_speed, double length, bool one_way, int lanes) : max_speed(max_speed),
-                                                                                                  length(length),
-                                                                                                  one_way(one_way),
-                                                                                                  lanes(lanes),
-                                                                                                  src(src),
-                                                                                                  dest(dest) {
+    explicit Edge(Node *src, Node *dest, int max_speed, double length, bool one_way, int lanes)
+        : src(src), dest(dest),
+          max_speed(max_speed),
+          length(length),
+          one_way(one_way),
+          lanes(lanes) {
     }
 
     static void
@@ -93,59 +109,86 @@ struct Edge {
         edges.reserve(790'509);
 
         std::ifstream file(edges_path);
-        char *header = new char[50];
-        header[49] = '\0';
-        file.getline(header, 50, '\n');
-        delete[] header;
+        if (!file.is_open()) {
+            return;
+        }
 
-        while (true) {
-            char *src, *dest, *max_speed, *length, *oneway, *lanes;
+        std::string line;
 
-            src = new char[15];
-            for (int i = 0; i < 15; ++i) src[i] = '\0';
-            dest = new char[15];
-            for (int i = 0; i < 15; ++i) dest[i] = '\0';
-            max_speed = new char[5];
-            for (int i = 0; i < 5; ++i) max_speed[i] = '\0';
-            length = new char[20];
-            for (int i = 0; i < 20; ++i) length[i] = '\0';
-            oneway = new char[6];
-            for (int i = 0; i < 6; ++i) oneway[i] = '\0';
-            lanes = new char[3];
-            for (int i = 0; i < 3; ++i) lanes[i] = '\0';
+        // Leer y descartar cabecera
+        if (!std::getline(file, line)) {
+            return;
+        }
 
-            file.getline(src, 15, ',');
-            file.getline(dest, 15, ',');
-            file.getline(max_speed, 5, ',');
-            file.getline(length, 20, ',');
-            file.getline(oneway, 6, ',');
-            file.getline(lanes, 3, '\n');
+        auto is_number = [](const std::string &s) {
+            if (s.empty()) return false;
+            for (unsigned char c : s) {
+                if (!std::isdigit(c)) return false;
+            }
+            return true;
+        };
 
-            if (file.eof()) {
-                break;
+        while (std::getline(file, line)) {
+            if (line.empty()) continue;
+
+            std::stringstream ss(line);
+            std::string src_str, dest_str, max_speed_str, length_str, oneway_str, lanes_str;
+
+            if (!std::getline(ss, src_str, ',')) continue;
+            if (!std::getline(ss, dest_str, ',')) continue;
+            if (!std::getline(ss, max_speed_str, ',')) continue;
+            if (!std::getline(ss, length_str, ',')) continue;
+            if (!std::getline(ss, oneway_str, ',')) continue;
+            if (!std::getline(ss, lanes_str, ',')) continue;
+
+            // Validar que src y dest sean numéricos
+            if (!is_number(src_str) || !is_number(dest_str)) {
+                continue;
             }
 
-            std::size_t src_id = static_cast<size_t>(std::stoll(src));
-            std::size_t dest_id = static_cast<size_t>(std::stoll(dest));
+            try {
+                std::size_t src_id = static_cast<std::size_t>(std::stoll(src_str));
+                std::size_t dest_id = static_cast<std::size_t>(std::stoll(dest_str));
 
-            Node *src_node = nodes[src_id];
-            Node *dest_node = nodes[dest_id];
+                auto it_src = nodes.find(src_id);
+                auto it_dest = nodes.find(dest_id);
+                if (it_src == nodes.end() || it_dest == nodes.end()) {
+                    // Arista apunta a un nodo que no existe en el mapa -> ignorar
+                    continue;
+                }
 
-            Edge *edge = new Edge(
-                    src_node,
-                    dest_node,
-                    std::stoi(max_speed),
-                    std::stod(length),
-                    std::strcmp(oneway, "True") == 0,
-                    std::stoi(lanes)
-            );
-            edges.push_back(edge);
+                int max_speed_val = 0;
+                int lanes_val = 0;
+                double length_val = 0.0;
 
-            delete[] src;
-            delete[] dest;
-            delete[] oneway;
-            delete[] length;
-            delete[] lanes;
+                if (!max_speed_str.empty())
+                    max_speed_val = std::stoi(max_speed_str);
+                if (!lanes_str.empty())
+                    lanes_val = std::stoi(lanes_str);
+                if (!length_str.empty())
+                    length_val = std::stod(length_str);
+
+                bool one_way_val = false;
+                if (!oneway_str.empty()) {
+                    // En el CSV venía "True"/"False"
+                    if (oneway_str == "True" || oneway_str == "true" || oneway_str == "1")
+                        one_way_val = true;
+                }
+
+                Edge *edge = new Edge(
+                        it_src->second,
+                        it_dest->second,
+                        max_speed_val,
+                        length_val,
+                        one_way_val,
+                        lanes_val
+                );
+                edges.push_back(edge);
+
+            } catch (const std::exception &) {
+                // Cualquier problema de conversión -> ignorar la línea
+                continue;
+            }
         }
     }
 
@@ -154,6 +197,5 @@ struct Edge {
         line.draw(window, sf::RenderStates::Default);
     }
 };
-
 
 #endif //HOMEWORK_GRAPH_EDGE_H

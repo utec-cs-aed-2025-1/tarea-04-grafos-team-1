@@ -17,9 +17,12 @@ class WindowManager {
 
 public:
     explicit WindowManager(int window_width = 600, int window_height = 800) :
-            window(sf::VideoMode(window_width, window_height), "Lima City Graph") {
+        window(sf::VideoMode(sf::Vector2u(
+                    static_cast<unsigned>(window_width),
+                    static_cast<unsigned>(window_height)
+                )),
+               "Lima City Graph") {
     }
-
     bool is_open() {
         return window.isOpen();
     }
@@ -29,8 +32,13 @@ public:
     }
 
     bool poll_event(sf::Event &event) {
-        return window.pollEvent(event);
+    if (auto ev = window.pollEvent()) {
+        event = *ev;
+        return true;
     }
+    return false;
+}
+
 
     void clear(sf::Color color = sf::Color::Black) {
         window.clear(color);

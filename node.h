@@ -7,12 +7,17 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <map>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <limits>
+#include <cmath>
 
 // Color por defecto de un vertice (usado por SFML)
 sf::Color default_node_color = sf::Color(150, 40, 50);
 // Radio por defecto de un vertice (usado por SFML)
 float default_radius = 0.4f;
-
 
 struct Edge;
 
@@ -45,36 +50,53 @@ struct Node {
 
     static void parse_csv(const std::string &nodes_path, std::map<std::size_t, Node *> &nodes) {
         std::ifstream file(nodes_path);
-        char *header = new char[40];
-        header[39] = '\0';
-        file.getline(header, 40, '\n');
-        delete[] header;
+        if (!file.is_open()) {
+            return; // o lanzar una excepción si quieres
+        }
 
-        while (true) {
-            char *id, *x, *y;
-            id = new char[15];
-            for (int i = 0; i < 15; ++i) id[i] = '\0';
-            y = new char[15];
-            for (int i = 0; i < 15; ++i) y[i] = '\0';
-            x = new char[15];
-            for (int i = 0; i < 15; ++i) x[i] = '\0';
+        std::string line;
 
-            file.getline(id, 15, ',');
-            file.getline(y, 15, ',');
-            file.getline(x, 15, '\n');
+        // Leer y descartar la cabecera
+        if (!std::getline(file, line)) {
+            return;
+        }
 
-            if (file.eof()) {
-                break;
+        // lambda helper para saber si un string es numérico (solo dígitos)
+        auto is_number = [](const std::string &s) {
+            if (s.empty()) return false;
+            for (unsigned char c : s) {
+                if (!std::isdigit(c)) return false;
             }
+            return true;
+        };
 
-            std::size_t identifier = static_cast<size_t>(std::stoll(id));
-            nodes.insert({
-                                 identifier,
-                                 new Node(identifier, std::stof(y), std::stof(x))});
+        while (std::getline(file, line)) {
+            if (line.empty()) continue;
 
-            delete[] id;
-            delete[] y;
-            delete[] x;
+            std::stringstream ss(line);
+            std::string id_str, y_str, x_str;
+
+            // CSV: id,lat,lon  (en tu código original leías y luego x)
+            if (!std::getline(ss, id_str, ',')) continue;
+            if (!std::getline(ss, y_str, ',')) continue;
+            if (!std::getline(ss, x_str, ',')) continue;
+
+            // Saltar líneas donde el id no es numérico (cabeceras, basura, etc.)
+            if (!is_number(id_str)) continue;
+
+            try {
+                std::size_t identifier = static_cast<std::size_t>(std::stoll(id_str));
+                float y = std::stof(y_str);
+                float x = std::stof(x_str);
+
+                nodes.insert({
+                    identifier,
+                    new Node(identifier, y, x)
+                });
+            } catch (const std::exception &) {
+                // Si alguna conversión falla, ignoramos la línea
+                continue;
+            }
         }
     }
 
@@ -91,6 +113,5 @@ struct Node {
         radius = default_radius;
     }
 };
-
 
 #endif //HOMEWORK_GRAPH_NODE_H

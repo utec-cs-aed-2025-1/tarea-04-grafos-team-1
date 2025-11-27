@@ -1,0 +1,108 @@
+/*
+ * Análisis de complejidad de los algoritmos de búsqueda de caminos
+ *
+ * Representación del grafo
+ * ------------------------
+ * En esta implementación el grafo se modela como:
+ *
+ *   - std::map<std::size_t, Node*> nodes;
+ *   - Cada Node contiene un std::vector<Edge*> edges;
+ *
+ * Es decir, usamos una lista de adyacencia: para cada vértice se guarda un
+ * vector con punteros a las aristas salientes. Denotemos:
+ *   V = número de vértices (nodes.size())
+ *   E = número de aristas (edges.size())
+ *
+ * Además, los algoritmos utilizan:
+ *   - std::unordered_map<Node*, double> o similar para distancias/heurísticas.
+ *   - std::unordered_map<Node*, Node*> para el padre de cada nodo.
+ *   - Una estructura tipo "open set" basada en std::set<Entry>, donde Entry
+ *     almacena (node, dist) y se ordena por dist. Este std::set actúa como
+ *     cola de prioridad: insertar, borrar y extraer el mínimo cuestan O(log V).
+ *
+ * 1) Dijkstra
+ * -----------
+ * Dijkstra recorre el grafo expandiendo el vértice con menor distancia
+ * acumulada desde el origen. En esta implementación:
+ *
+ *   - Cada vértice puede ser insertado/actualizado en el std::set un número
+ *     acotado de veces (a lo más cuando se mejora su distancia).
+ *   - Cada extracción del mínimo del std::set cuesta O(log V).
+ *   - El bucle principal procesa todas las aristas salientes de cada vértice.
+ *
+ * En total:
+ *   - Se relajan O(E) aristas.
+ *   - Cada relajación puede implicar una inserción/actualización en el set:
+ *       coste O(log V) por operación.
+ *
+ * Complejidad temporal de Dijkstra:
+ *   O((V + E) · log V)   ≈   O(E · log V) en grafos grandes (E >> V).
+ *
+ * Complejidad espacial:
+ *   - O(V) para las tablas de distancias y padres.
+ *   - O(E) para almacenar la lista de adyacencia.
+ *   En conjunto: O(V + E).
+ *
+ * 2) Best-First Search (Greedy Best First)
+ * ---------------------------------------
+ * Best-First Search (en su versión greedy) utiliza únicamente la heurística h(n)
+ * para priorizar la expansión de nodos: el "open set" es de nuevo un std::set
+ * ordenado por el valor heurístico del nodo.
+ *
+ * La estructura de datos y el patrón del algoritmo son casi idénticos a
+ * Dijkstra, solo cambia la función de prioridad (h en lugar de la distancia
+ * acumulada).
+ *
+ * Por ello, en esta implementación la complejidad es:
+ *
+ * Complejidad temporal de Best-First Search:
+ *   O((V + E) · log V), porque:
+ *     - Cada nodo puede ser insertado en el set varias veces.
+ *     - Cada extracción/inserción en el set cuesta O(log V).
+ *     - Se recorren como máximo todas las aristas.
+ *
+ * Complejidad espacial:
+ *   Igual que Dijkstra: O(V + E) por las estructuras auxiliares y la lista
+ *   de adyacencia.
+ *
+ * 3) A* (A star)
+ * --------------
+ * A* combina la distancia acumulada g(n) con la heurística h(n) para definir
+ * la función f(n) = g(n) + h(n). En esta implementación:
+ *
+ *   - Se mantiene un "open set" (std::set<Entry>) ordenado por f(n).
+ *   - Se almacenan tablas de:
+ *       g[n]   -> costo desde el origen hasta n.
+ *       parent[n] -> predecesor para reconstruir la ruta óptima.
+ *   - El bucle principal es muy similar a Dijkstra, solo que en lugar de
+ *     priorizar por la distancia g, prioriza por f.
+ *
+ * En el peor caso (cuando la heurística no ayuda), A* puede visitar prácticamente
+ * los mismos nodos que Dijkstra.
+ *
+ * Complejidad temporal de A*:
+ *   O((V + E) · log V) en el peor caso, por el mismo razonamiento:
+ *     - O(E) relajaciones de aristas.
+ *     - Cada vez que se actualiza un nodo se inserta/actualiza en el std::set
+ *       con coste O(log V).
+ *
+ * Complejidad espacial:
+ *   O(V + E) por:
+ *     - g[], parent[] y otras estructuras auxiliares.
+ *     - almacenamiento de la lista de adyacencia.
+ *
+ * Resumen
+ * -------
+ * Con la representación actual (lista de adyacencia) y el uso de std::set como
+ * cola de prioridad, los tres algoritmos (Dijkstra, Best-First Search y A*)
+ * tienen la misma cota de complejidad en el peor caso:
+ *
+ *   - Tiempo:    O((V + E) · log V)
+ *   - Memoria:   O(V + E)
+ *
+ * La diferencia práctica entre ellos viene dada por:
+ *   - La función de prioridad (solo g, solo h, o g + h).
+ *   - Qué tan informativa sea la heurística: en A* y Best-First Search una buena
+ *     heurística reduce el número de nodos realmente explorados, aunque la cota
+ *     asintótica siga siendo la misma.
+ */
