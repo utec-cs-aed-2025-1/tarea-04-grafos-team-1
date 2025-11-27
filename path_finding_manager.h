@@ -109,7 +109,7 @@ class PathFindingManager {
                                            sf::Color(100, 100, 255), 1.0f);
             }
 
-            render(graph);
+            //render(graph);
         }
 
         set_final_path(parent);
@@ -158,7 +158,7 @@ class PathFindingManager {
                                            sf::Color(100, 255, 100), 1.0f);
             }
 
-            render(graph);
+            //render(graph);
         }
 
         set_final_path(parent);
@@ -210,7 +210,7 @@ class PathFindingManager {
                                            sf::Color(255, 165, 0), 1.0f);
             }
 
-            render(graph);
+            //render(graph);
         }
 
         set_final_path(parent);
