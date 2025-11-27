@@ -25,9 +25,21 @@ float default_thickness = 0.8;
 class sfLine : public sf::Drawable {
 public:
     sfLine(const sf::Vector2f& point1, const sf::Vector2f& point2, sf::Color color, float thickness)
-    : thickness(thickness) {
+        : thickness(thickness) {
+
         sf::Vector2f direction = point2 - point1;
-        sf::Vector2f unitDirection = direction / std::sqrt(direction.x * direction.x + direction.y * direction.y);
+        float lenSq = direction.x * direction.x + direction.y * direction.y;
+
+        // Si los puntos son iguales (longitud 0), evitamos dividir entre 0.
+        if (lenSq == 0.f) {
+            for (auto &vertex : Vertices) {
+                vertex.position = point1;
+                vertex.color = color;
+            }
+            return;
+        }
+
+        sf::Vector2f unitDirection = direction / std::sqrt(lenSq);
         sf::Vector2f unitPerpendicular(-unitDirection.y, unitDirection.x);
 
         sf::Vector2f offset = (this->thickness / 2.f) * unitPerpendicular;

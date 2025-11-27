@@ -10,6 +10,7 @@
 #include "node.h"
 #include "edge.h"
 #include <map>
+#include <vector>
 
 // *
 // ---- Graph ----
